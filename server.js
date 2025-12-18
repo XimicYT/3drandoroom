@@ -4,17 +4,8 @@ const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 
-// ALLOW CORS: This tells the server to accept connections from external websites
 const io = new Server(server, {
-  cors: {
-    origin: "*", // Allow any website to connect (safe for this project)
-    methods: ["GET", "POST"]
-  }
-});
-
-// We no longer serve static files here because Netlify does that.
-app.get('/', (req, res) => {
-  res.send('Server is running. Connect via the Netlify frontend.');
+  cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 let players = {};
@@ -24,9 +15,8 @@ io.on('connection', (socket) => {
 
   socket.on('join', (username) => {
     players[socket.id] = {
-      x: 0,
-      y: 0.5,
-      z: 0,
+      x: 0, y: 2, z: 0,        // Start in the air
+      ry: 0,                   // Rotation Y (Yaw)
       color: Math.random() * 0xffffff,
       username: username
     };
@@ -37,8 +27,14 @@ io.on('connection', (socket) => {
   socket.on('move', (data) => {
     if (players[socket.id]) {
       players[socket.id].x = data.x;
+      players[socket.id].y = data.y;
       players[socket.id].z = data.z;
-      socket.broadcast.emit('updatePlayer', { id: socket.id, x: data.x, z: data.z });
+      players[socket.id].ry = data.ry; // Sync rotation
+      
+      socket.broadcast.emit('updatePlayer', { 
+        id: socket.id, 
+        x: data.x, y: data.y, z: data.z, ry: data.ry 
+      });
     }
   });
 
