@@ -1,13 +1,17 @@
 {
-  "name": "3d-chat-server",
+  "name": "tag-arena-server",
   "version": "1.0.0",
-  "description": "Socket server for 3D chat",
+  "description": "Socket.io Server for Tag Arena",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.6.1"
+    "socket.io": "^4.7.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=14.x"
   }
 }
