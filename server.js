@@ -3,47 +3,44 @@ const app = express();
 const http = require('http').createServer(app);
 const cors = require('cors');
 
-// 1. Enable CORS for Express
 app.use(cors());
 
-// 2. Setup Socket.io with CORS
 const io = require('socket.io')(http, {
-    cors: {
-        // Allow connections from your Netlify site (or any site for now)
-        origin: "*", 
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 const players = {};
 
-// Basic health check endpoint
-app.get('/', (req, res) => {
-    res.send('Game Server is Running!');
-});
+app.get('/', (req, res) => res.send('Game Server Running'));
 
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    players[socket.id] = {
-        x: 0, y: 2, z: 5,
-        yaw: 0,
-        color: '#' + Math.floor(Math.random()*16777215).toString(16)
-    };
+    // We wait for the client to send "joinGame" before adding them to the list
+    socket.on('joinGame', (userData) => {
+        players[socket.id] = {
+            x: 0, y: 2, z: 0, // Start in the center room
+            yaw: 0,
+            color: '#' + Math.floor(Math.random()*16777215).toString(16),
+            username: userData.username || `Player ${socket.id.substr(0,4)}`
+        };
 
-    socket.emit('currentPlayers', players);
-
-    socket.broadcast.emit('newPlayer', { 
-        id: socket.id, 
-        player: players[socket.id] 
+        // Send existing players to the new guy
+        socket.emit('currentPlayers', players);
+        
+        // Notify others
+        socket.broadcast.emit('newPlayer', { 
+            id: socket.id, 
+            player: players[socket.id] 
+        });
     });
 
-    socket.on('playerMovement', (movementData) => {
+    socket.on('playerMovement', (data) => {
         if (players[socket.id]) {
-            players[socket.id].x = movementData.x;
-            players[socket.id].y = movementData.y;
-            players[socket.id].z = movementData.z;
-            players[socket.id].yaw = movementData.yaw;
+            players[socket.id].x = data.x;
+            players[socket.id].y = data.y;
+            players[socket.id].z = data.z;
+            players[socket.id].yaw = data.yaw;
             
             socket.broadcast.emit('playerMoved', {
                 id: socket.id,
@@ -56,13 +53,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
         delete players[socket.id];
         io.emit('playerDisconnected', socket.id);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+http.listen(PORT, () => console.log(`Server on port ${PORT}`));
